@@ -9,6 +9,10 @@ const num = (value, fallback) => {
   return value === undefined || value === '' || Number.isNaN(n) ? fallback : n;
 };
 
+const list = (value, fallback) => (value === undefined
+  ? fallback
+  : value.split(',').map((v) => v.trim().toUpperCase()).filter(Boolean));
+
 export const config = {
   port: num(process.env.PORT, 3000),
   dbPath: process.env.DB_PATH || resolve(process.cwd(), 'data', 'tracker.db'),
@@ -35,6 +39,16 @@ export const config = {
   checkIntervalHours: num(process.env.CHECK_INTERVAL_HOURS, process.env.SERPAPI_KEY ? 24 : 12),
   // Each (outbound date x return date) pair costs one flight search per route.
   maxDateCombos: num(process.env.MAX_DATE_COMBOS, 12),
+
+  // "Fly into Manchester" allows this many stops even if the trip's limit is
+  // lower: United doesn't fly to MAN, so it takes a partner connection.
+  manMaxStops: num(process.env.MAN_MAX_STOPS, 2),
+  // United + one of these partners, connecting at one of these hubs, counts as
+  // a United trip (e.g. United to Frankfurt, Lufthansa on to Manchester).
+  // Costs one extra search per date pair on the Manchester route; leave
+  // PARTNER_AIRLINES empty to turn it off.
+  partnerAirlines: list(process.env.PARTNER_AIRLINES, ['LH', 'SN']),
+  partnerHubs: list(process.env.PARTNER_HUBS, ['BRU', 'FRA']),
 
   // Ground legs (one-way, per person, GBP)
   heathrowTransferGbp: num(process.env.HEATHROW_TRANSFER_GBP, 16),

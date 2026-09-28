@@ -1,5 +1,6 @@
 // Turns raw flight + train search results into comparable door-to-door
-// options: "United to Heathrow + train to Manchester" vs "fly into Manchester".
+// options: "United to Heathrow + train to Manchester" vs "fly into Manchester"
+// (usually a connection, since United doesn't fly there).
 
 import { addDays, addMinutes } from './dates.js';
 import { convertToUsd } from './currency.js';
@@ -18,13 +19,30 @@ function offerCarriers(offer) {
   return [...new Set(segments.map((s) => s.carrier))];
 }
 
-export function isPreferredOffer(offer, preferredAirline) {
+// Airports where you change planes (outbound, plus return when known)
+export function connectionAirports(offer) {
+  return [offer.outbound, offer.inbound]
+    .filter(Boolean)
+    .flatMap((slice) => slice.segments.slice(1).map((s) => s.from));
+}
+
+// All on the preferred airline, or the preferred airline plus a partner
+// connecting at one of the partner hubs (e.g. United + Lufthansa via FRA).
+export function isPreferredOffer(offer, preferredAirline, { partnerAirlines = [], partnerHubs = [] } = {}) {
   if (!preferredAirline) return true;
-  return offerCarriers(offer).every((c) => c === preferredAirline);
+  const carriers = offerCarriers(offer);
+  if (carriers.every((c) => c === preferredAirline)) return true;
+  return carriers.includes(preferredAirline)
+    && carriers.every((c) => c === preferredAirline || partnerAirlines.includes(c))
+    && connectionAirports(offer).some((a) => partnerHubs.includes(a));
 }
 
 export function carrierLabel(offer) {
-  return offerCarriers(offer).map(airlineName).join(' + ');
+  const carriers = offerCarriers(offer);
+  const label = carriers.map(airlineName).join(' + ');
+  if (carriers.length < 2) return label;
+  const via = [...new Set(connectionAirports(offer))];
+  return via.length ? `${label} via ${via.join('/')}` : label;
 }
 
 // Cheapest train you can make, but only among trains close to the first one
@@ -98,7 +116,7 @@ async function priceOffer(offer, route, ctx) {
 
   return {
     route,
-    isPreferred: isPreferredOffer(offer, ctx.preferredAirline),
+    isPreferred: isPreferredOffer(offer, ctx.preferredAirline, ctx),
     carrier: carrierLabel(offer),
     flightUsd: Math.round(flightUsd),
     railUsd: Math.round(railUsd),
@@ -113,8 +131,8 @@ async function priceOffer(offer, route, ctx) {
 export async function bestOptionsForRoute(offers, route, ctx) {
   const eligible = offers.filter((o) => o.outbound?.arriveAt && o.outbound.stops <= ctx.maxStops);
   const byPrice = (a, b) => a.price - b.price;
-  const preferred = eligible.filter((o) => isPreferredOffer(o, ctx.preferredAirline)).sort(byPrice);
-  const others = eligible.filter((o) => !isPreferredOffer(o, ctx.preferredAirline)).sort(byPrice);
+  const preferred = eligible.filter((o) => isPreferredOffer(o, ctx.preferredAirline, ctx)).sort(byPrice);
+  const others = eligible.filter((o) => !isPreferredOffer(o, ctx.preferredAirline, ctx)).sort(byPrice);
 
   const best = async (list) => {
     let winner = null;

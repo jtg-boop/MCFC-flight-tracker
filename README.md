@@ -7,9 +7,9 @@ For each trip you pick a window of outbound and return dates. The app checks eve
 | Route | What's included |
 |---|---|
 | **United to Heathrow + train** | Round-trip flight DEN⇄LHR, Heathrow⇄Euston transfer, Avanti West Coast Euston⇄Manchester Piccadilly |
-| **Fly into Manchester** | Round-trip flight DEN⇄MAN (1 stop), Manchester Airport⇄Piccadilly train |
+| **Fly into Manchester** | Round-trip flight DEN⇄MAN (up to 2 stops), Manchester Airport⇄Piccadilly train |
 
-United is the preferred airline. The app shows the best **United** option for each route, plus the cheapest option on **any airline** so you can see what sticking with United costs. Trips are re-checked automatically (every 12 hours by default). The app keeps a price history chart and can send a push notification to your phone when the price drops below your target.
+United is the preferred airline. United doesn't fly to Manchester, so a **United + partner** connection also counts as United: United to Frankfurt then Lufthansa, or United to Brussels then Brussels Airlines (one ticket, bags checked through). Change the partners and hubs with `PARTNER_AIRLINES` and `PARTNER_HUBS`. The app shows the best **United** option for each route, plus the cheapest option on **any airline** so you can see what sticking with United costs. Trips are re-checked automatically (every 12 hours by default). The app keeps a price history chart and can send a push notification to your phone when the price drops below your target.
 
 Rail connections follow the flight times. The app won't pick a train you couldn't catch after landing. If a return flight leaves too early to reach Heathrow by train that morning, it books the train the day before and tells you.
 
@@ -38,7 +38,7 @@ Copy `.env.example` to `.env` and fill in what you want:
 
 Setting either key is enough: the app uses SerpApi if `SERPAPI_KEY` is set, otherwise Duffel if `DUFFEL_ACCESS_TOKEN` is set. `FLIGHT_PROVIDER` overrides this.
 
-**Budget your searches.** Each trip check runs *(outbound dates × return dates × routes)* searches. Fixed dates with both routes is 2 searches per check; a 2-day × 2-day window is 8. With a SerpApi key the app checks once a day by default (`CHECK_INTERVAL_HOURS=24`), so one fixed-date trip uses about 60 of the 100 free searches a month. Every **Check prices now** click also uses searches.
+**Budget your searches.** Each trip check runs *(outbound dates × return dates)* × 3 searches: one for Heathrow, and two for Manchester (an open search plus one just for United + partner connections). Fixed dates with both routes is 3 searches per check; a 2-day × 2-day window is 12. With a SerpApi key the app checks once a day by default (`CHECK_INTERVAL_HOURS=24`), so one fixed-date trip uses about 90 of the 100 free searches a month. Set `PARTNER_AIRLINES=` (empty) to drop the partner search, or `CHECK_INTERVAL_HOURS=48` to halve usage. Every **Check prices now** click also uses searches.
 
 ### Trains
 

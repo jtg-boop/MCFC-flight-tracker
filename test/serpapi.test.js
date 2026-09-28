@@ -40,6 +40,7 @@ test('serpapi provider sends the right query and parses offers', async () => {
   assert.equal(requested.searchParams.get('outbound_date'), '2027-01-25');
   assert.equal(requested.searchParams.get('return_date'), '2027-02-04');
   assert.equal(requested.searchParams.get('stops'), '2'); // 1 stop or fewer
+  assert.equal(requested.searchParams.has('include_airlines'), false);
 
   assert.equal(offers.length, 2);
   const [united, other] = offers;
@@ -59,4 +60,16 @@ test('serpapi errors are reported clearly', async () => {
     provider.searchRoundTrip({ origin: 'DEN', destination: 'LHR', departDate: '2027-01-25', returnDate: '2027-02-04' }),
     /Invalid API key/,
   );
+});
+
+test('serpapi provider can restrict results to given airlines', async () => {
+  let requested;
+  globalThis.fetch = async (url) => {
+    requested = new URL(url);
+    return new Response(JSON.stringify(sample), { status: 200 });
+  };
+  const provider = createSerpApiProvider({ apiKey: 'k' });
+  await provider.searchRoundTrip({ origin: 'DEN', destination: 'MAN', departDate: '2027-01-25', returnDate: '2027-02-04', maxStops: 2, includeAirlines: ['UA', 'LH', 'SN'] });
+  assert.equal(requested.searchParams.get('include_airlines'), 'UA,LH,SN');
+  assert.equal(requested.searchParams.get('stops'), '3'); // 2 stops or fewer
 });

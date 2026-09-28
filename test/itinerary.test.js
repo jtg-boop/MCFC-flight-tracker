@@ -87,3 +87,41 @@ test('returns best preferred and best other-airline option separately', async ()
   assert.equal(results[1].flightUsd, 900);
   assert.equal(results[0].railUsd, 0);
 });
+
+function partnerOffer(partner, hub, price) {
+  const leg = (carrier, from, to, departAt, arriveAt) => ({ from, to, carrier, flightNumber: `${carrier} 1`, departAt, arriveAt });
+  return {
+    price, currency: 'USD', carriers: ['UA', partner],
+    outbound: {
+      departAt: '2026-10-01T17:40', arriveAt: '2026-10-02T13:15', stops: 1,
+      segments: [leg('UA', 'DEN', hub, '2026-10-01T17:40', '2026-10-02T10:00'), leg(partner, hub, 'MAN', '2026-10-02T11:30', '2026-10-02T13:15')],
+    },
+    inbound: null,
+    bookingUrl: 'https://example.test',
+  };
+}
+
+const partners = { partnerAirlines: ['LH', 'SN'], partnerHubs: ['BRU', 'FRA'] };
+
+test('United + partner via a partner hub counts as preferred', () => {
+  assert.equal(isPreferredOffer(partnerOffer('LH', 'FRA', 1000), 'UA', partners), true);
+  assert.equal(isPreferredOffer(partnerOffer('SN', 'BRU', 1000), 'UA', partners), true);
+  // Partner, but connecting somewhere else
+  assert.equal(isPreferredOffer(partnerOffer('LH', 'MUC', 1000), 'UA', partners), false);
+  // Not a partner
+  assert.equal(isPreferredOffer(partnerOffer('EI', 'FRA', 1000), 'UA', partners), false);
+  // Partners off
+  assert.equal(isPreferredOffer(partnerOffer('LH', 'FRA', 1000), 'UA'), false);
+});
+
+test('Manchester route picks a 2-stop partner connection as the United option', async () => {
+  const twoStop = partnerOffer('LH', 'FRA', 950);
+  twoStop.outbound.stops = 2;
+  const results = await bestOptionsForRoute([twoStop, offer('BA', 900)], ROUTES.MAN, { ...ctx, ...partners, maxStops: 2 });
+  const united = results.find((o) => o.isPreferred);
+  assert.equal(united.flightUsd, 950);
+  assert.equal(united.carrier, 'United + Lufthansa via FRA');
+  // Same offer is excluded when the stop limit is 1
+  const strict = await bestOptionsForRoute([twoStop], ROUTES.MAN, { ...ctx, ...partners, maxStops: 1 });
+  assert.equal(strict.length, 0);
+});

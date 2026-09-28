@@ -10,6 +10,7 @@ import { addDays, todayIso } from '../src/dates.js';
 const config = {
   maxDateCombos: 12, heathrowTransferGbp: 16, manchesterAirportTransferGbp: 5,
   lhrToEustonMinutes: 150, eustonToLhrMinutes: 240, fallbackRates: { GBP: 1.3 },
+  manMaxStops: 2, partnerAirlines: ['LH', 'SN'], partnerHubs: ['BRU', 'FRA'],
 };
 const base = addDays(todayIso(), 60);
 const input = {
@@ -44,4 +45,20 @@ test('checkTrip stores options for both routes using demo providers', async () =
   assert.ok(rail.rail_usd > 0 && rail.details.trainOut && rail.details.trainBack);
   assert.equal(repo.history(saved.id).length > 0, true);
   assert.ok(repo.listTrips()[0].latest_preferred_usd > 0);
+});
+
+test('Manchester route runs an extra United + partner search with more stops', async () => {
+  const repo = openDb(':memory:');
+  const { trip } = validateTrip({ ...input, depart_to: base, return_to: addDays(base, 4), include_lhr_rail: false }, config);
+  const saved = repo.createTrip(trip);
+  const calls = [];
+  const deps = {
+    repo, config: { ...config, ntfyTopic: '' },
+    flights: { name: 'mock', searchRoundTrip: (q) => { calls.push(q); return mockFlights.searchRoundTrip(q); } },
+    trains: { name: 'estimate', searchSingle: estimateTrains.searchSingle },
+  };
+  await checkTrip(saved, deps);
+  assert.equal(calls.length, 2);
+  assert.ok(calls.every((c) => c.destination === 'MAN' && c.maxStops === 2));
+  assert.deepEqual(calls[1].includeAirlines, ['UA', 'LH', 'SN']);
 });

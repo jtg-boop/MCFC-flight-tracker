@@ -21,6 +21,16 @@ export function tripCombos(trip) {
   });
 }
 
+function dedupeOffers(offers) {
+  const seen = new Set();
+  return offers.filter((o) => {
+    const key = [o.price, ...[o.outbound, o.inbound].filter(Boolean).flatMap((sl) => sl.segments.map((x) => `${x.flightNumber}@${x.departAt}`))].join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 // Search every date pair for a trip, store the results, and alert if the
 // best preferred-airline price hits the target.
 export async function checkTrip(trip, { repo, flights, trains, config }) {
@@ -32,31 +42,51 @@ export async function checkTrip(trip, { repo, flights, trains, config }) {
     return trainCache.get(key);
   };
 
+  const partnerAirlines = config.partnerAirlines || [];
   const routes = [];
-  if (trip.include_lhr_rail) routes.push({ route: ROUTES.LHR_RAIL, destination: 'LHR' });
-  if (trip.include_man) routes.push({ route: ROUTES.MAN, destination: 'MAN' });
+  if (trip.include_lhr_rail) routes.push({ route: ROUTES.LHR_RAIL, destination: 'LHR', maxStops: trip.max_stops });
+  if (trip.include_man) {
+    routes.push({
+      route: ROUTES.MAN,
+      destination: 'MAN',
+      maxStops: Math.max(trip.max_stops, config.manMaxStops ?? trip.max_stops),
+      // An open search rarely surfaces United + partner connections, so ask for them too
+      partnerSearch: Boolean(trip.preferred_airline && partnerAirlines.length),
+    });
+  }
 
   const options = [];
   const errors = [];
   for (const { departDate, returnDate } of tripCombos(trip)) {
-    for (const { route, destination } of routes) {
+    for (const { route, destination, maxStops, partnerSearch } of routes) {
       try {
-        const offers = await flights.searchRoundTrip({
+        const search = (extra = {}) => flights.searchRoundTrip({
           origin: trip.origin,
           destination,
           departDate,
           returnDate,
           adults: trip.adults,
           cabin: trip.cabin,
-          maxStops: trip.max_stops,
+          maxStops,
+          ...extra,
         });
+        let offers = await search();
+        if (partnerSearch) {
+          try {
+            offers = dedupeOffers([...offers, ...await search({ includeAirlines: [trip.preferred_airline, ...partnerAirlines] })]);
+          } catch (err) {
+            errors.push(`${destination} partners ${departDate}/${returnDate}: ${err.message}`);
+          }
+        }
         const best = await bestOptionsForRoute(offers, route, {
           usdPer,
           settings: config,
           adults: trip.adults,
           returnDate,
           preferredAirline: trip.preferred_airline,
-          maxStops: trip.max_stops,
+          partnerAirlines,
+          partnerHubs: config.partnerHubs || [],
+          maxStops,
           getTrains,
         });
         for (const o of best) options.push({ ...o, departDate, returnDate });

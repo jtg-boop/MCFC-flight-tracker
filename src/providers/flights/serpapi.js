@@ -29,7 +29,7 @@ export function createSerpApiProvider({ apiKey }) {
   if (!apiKey) throw new Error('FLIGHT_PROVIDER=serpapi needs SERPAPI_KEY');
 
   return {
-    async searchRoundTrip({ origin, destination, departDate, returnDate, adults = 1, cabin = 'economy', maxStops = 1 }) {
+    async searchRoundTrip({ origin, destination, departDate, returnDate, adults = 1, cabin = 'economy', maxStops = 1, includeAirlines }) {
       const params = new URLSearchParams({
         engine: 'google_flights',
         api_key: apiKey,
@@ -45,6 +45,7 @@ export function createSerpApiProvider({ apiKey }) {
         // SerpApi stops: 0 any, 1 nonstop, 2 up to 1 stop, 3 up to 2 stops
         stops: String(Math.min(3, maxStops + 1)),
       });
+      if (includeAirlines?.length) params.set('include_airlines', includeAirlines.join(','));
       const res = await fetch(`https://serpapi.com/search.json?${params}`);
       const body = await res.json().catch(() => ({}));
       if (!res.ok || body.error) {
