@@ -47,6 +47,13 @@ test('pickTrain respects the connection window and picks the cheapest', () => {
   assert.equal(pickTrain(trains, { earliestDepart: '2026-10-02T14:00' }), null);
 });
 
+test('pickTrain ignores a cheap train hours after the first one you could catch', () => {
+  const trains = [train('EUS', '2026-10-02', '10:00', 60), train('EUS', '2026-10-02', '12:00', 55), train('EUS', '2026-10-02', '20:00', 20)];
+  assert.equal(pickTrain(trains, { earliestDepart: '2026-10-02T10:00', windowMinutes: 180 }).departAt, '2026-10-02T12:00');
+  const home = [train('MAN', '2026-10-06', '06:00', 20), train('MAN', '2026-10-06', '10:00', 50), train('MAN', '2026-10-06', '11:00', 70)];
+  assert.equal(pickTrain(home, { latestArrive: '2026-10-06T13:30', preferLate: true, windowMinutes: 180 }).departAt, '2026-10-06T10:00');
+});
+
 test('LHR + rail option adds trains and Heathrow transfers', async () => {
   const [best] = await bestOptionsForRoute([offer('UA', 1000)], ROUTES.LHR_RAIL, ctx);
   // Out: 13:00 £30. Back: flight 12:00 - 240 min => must arrive Euston by 08:00, only 05:00 (£90) fits.

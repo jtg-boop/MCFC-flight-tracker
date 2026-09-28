@@ -21,6 +21,7 @@ const usd = (n) => (n == null ? '—' : `$${Math.round(n).toLocaleString('en-US'
 const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const utc = (sqlTime) => new Date(`${sqlTime.replace(' ', 'T')}Z`);
 const fmtDate = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const fmtRange = (from, to) => (from === to ? fmtDate(from) : `${fmtDate(from)}–${fmtDate(to)}`);
 const fmtTime = (local) => (local ? local.slice(11, 16) : '?');
 const fmtDateTime = (local) => (local ? `${fmtDate(local.slice(0, 10))} ${fmtTime(local)}` : 'time not provided');
 
@@ -193,8 +194,8 @@ async function renderTrip(id) {
           <h1 style="margin-bottom:4px">${esc(trip.name)}</h1>
           <div class="meta">
             ${trip.match_label ? `${esc(trip.match_label)} · ${esc(fmtDate(trip.match_date))}<br>` : ''}
-            ${esc(trip.origin)} out ${esc(fmtDate(trip.depart_from))}–${esc(fmtDate(trip.depart_to))},
-            home ${esc(fmtDate(trip.return_from))}–${esc(fmtDate(trip.return_to))} ·
+            ${esc(trip.origin)} out ${esc(fmtRange(trip.depart_from, trip.depart_to))},
+            home ${esc(fmtRange(trip.return_from, trip.return_to))} ·
             ${trip.adults} traveller${trip.adults > 1 ? 's' : ''} · ${esc(trip.cabin.replace('_', ' '))}
           </div>
           <div class="meta">Last checked ${esc(timeAgo(latestRun?.checked_at))}${latestRun ? ` via ${esc(latestRun.flight_provider)}` : ''}${trip.active ? '' : ' · <strong>paused</strong>'}</div>

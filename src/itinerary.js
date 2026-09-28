@@ -27,22 +27,33 @@ export function carrierLabel(offer) {
   return offerCarriers(offer).map(airlineName).join(' + ');
 }
 
-// Cheapest train in the time window. Ties go to the earliest train out of
-// London (more time in Manchester) or the latest train back.
-export function pickTrain(trains, { earliestDepart, latestArrive, preferLate = false }) {
-  const valid = trains.filter(
+// Cheapest train you can make, but only among trains close to the first one
+// you could catch (or the last one that still works on the way home): a
+// cheaper fare isn't worth half a day sitting at Euston.
+export function pickTrain(trains, { earliestDepart, latestArrive, preferLate = false, windowMinutes = 180 }) {
+  let valid = trains.filter(
     (t) => (!earliestDepart || t.departAt >= earliestDepart) && (!latestArrive || t.arriveAt <= latestArrive),
   );
+  if (!valid.length) return null;
+  if (windowMinutes != null) {
+    if (preferLate) {
+      const cutoff = addMinutes(valid.reduce((m, t) => (t.arriveAt > m ? t.arriveAt : m), valid[0].arriveAt), -windowMinutes);
+      valid = valid.filter((t) => t.arriveAt >= cutoff);
+    } else {
+      const cutoff = addMinutes(valid.reduce((m, t) => (t.departAt < m ? t.departAt : m), valid[0].departAt), windowMinutes);
+      valid = valid.filter((t) => t.departAt <= cutoff);
+    }
+  }
   valid.sort((a, b) => a.price - b.price || (preferLate ? b.departAt.localeCompare(a.departAt) : a.departAt.localeCompare(b.departAt)));
-  return valid[0] || null;
+  return valid[0];
 }
 
 async function outboundTrain(offer, { getTrains, settings }) {
   const earliestDepart = addMinutes(offer.outbound.arriveAt, settings.lhrToEustonMinutes);
   const arrivalDate = earliestDepart.slice(0, 10);
-  let train = pickTrain(await getTrains('EUS', 'MAN', arrivalDate), { earliestDepart });
+  let train = pickTrain(await getTrains('EUS', 'MAN', arrivalDate), { earliestDepart, windowMinutes: settings.trainWindowMinutes });
   if (train) return { train, note: null };
-  train = pickTrain(await getTrains('EUS', 'MAN', addDays(arrivalDate, 1)), {});
+  train = pickTrain(await getTrains('EUS', 'MAN', addDays(arrivalDate, 1)), { windowMinutes: settings.trainWindowMinutes });
   return train ? { train, note: 'Lands too late for a train north the same day. Budget a night in London.' } : { train: null };
 }
 
@@ -55,9 +66,9 @@ async function returnTrain(offer, { returnDate, getTrains, settings }) {
   }
   const latestArrive = addMinutes(flightDepart, -settings.eustonToLhrMinutes);
   const flightDate = flightDepart.slice(0, 10);
-  let train = pickTrain(await getTrains('MAN', 'EUS', flightDate), { latestArrive, preferLate: true });
+  let train = pickTrain(await getTrains('MAN', 'EUS', flightDate), { latestArrive, preferLate: true, windowMinutes: settings.trainWindowMinutes });
   if (train) return { train, note };
-  train = pickTrain(await getTrains('MAN', 'EUS', addDays(flightDate, -1)), { preferLate: true });
+  train = pickTrain(await getTrains('MAN', 'EUS', addDays(flightDate, -1)), { preferLate: true, windowMinutes: settings.trainWindowMinutes });
   const overnight = 'Flight leaves too early to get there by train that morning. Train down the day before.';
   return train ? { train, note: note ? `${note} ${overnight}` : overnight } : { train: null };
 }

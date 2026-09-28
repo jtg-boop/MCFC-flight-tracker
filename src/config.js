@@ -38,6 +38,9 @@ export const config = {
   lhrToEustonMinutes: num(process.env.LHR_TO_EUSTON_MINUTES, 150),
   // Minutes you need between a train arriving at Euston and your flight leaving LHR
   eustonToLhrMinutes: num(process.env.EUSTON_TO_LHR_MINUTES, 240),
+  // Only consider trains within this many minutes of the first one you could
+  // catch (or the last one that works going home)
+  trainWindowMinutes: num(process.env.TRAIN_WINDOW_MINUTES, 180),
 
   fallbackRates: {
     GBP: num(process.env.GBP_USD_RATE, 1.33),
