@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blue Moon Travel</title>
+  <meta name="theme-color" content="#1c2c5b">
+  <link rel="stylesheet" href="styles.css">
+  <script src="vendor/chart.umd.js" defer></script>
+  <script src="app.js" type="module"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a href="#/" class="brand">
+      <span class="badge" aria-hidden="true">🩵</span>
+      <span><strong>Blue Moon Travel</strong><small>Denver → Manchester price tracker</small></span>
+    </a>
+    <a href="#/new" class="btn primary">+ Track a trip</a>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+  <main id="view" aria-live="polite"></main>
+
+  <template id="trip-form-tpl">
+    <section class="card">
+      <h1>Track a trip</h1>
+      <div id="fixture-picker" class="field" hidden>
+        <label for="fixture">Pick a City match (fills in the dates)</label>
+        <select id="fixture"><option value="">Loading fixtures…</option></select>
+        <label class="inline"><input type="checkbox" id="show-away"> Show away matches too</label>
+      </div>
+      <form id="trip-form" novalidate>
+        <div class="field">
+          <label for="name">Trip name</label>
+          <input id="name" name="name" required placeholder="City vs Arsenal">
+        </div>
+        <fieldset>
+          <legend>Fly out of Denver between</legend>
+          <div class="row">
+            <input type="date" name="depart_from" required aria-label="Earliest outbound date">
+            <span>and</span>
+            <input type="date" name="depart_to" required aria-label="Latest outbound date">
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Fly home between</legend>
+          <div class="row">
+            <input type="date" name="return_from" required aria-label="Earliest return date">
+            <span>and</span>
+            <input type="date" name="return_to" required aria-label="Latest return date">
+          </div>
+          <p class="hint" id="combo-hint"></p>
+        </fieldset>
+        <fieldset>
+          <legend>Routes to compare</legend>
+          <label class="inline"><input type="checkbox" name="include_lhr_rail" checked> Fly to Heathrow + Avanti train to Manchester</label>
+          <label class="inline"><input type="checkbox" name="include_man" checked> Fly into Manchester Airport (1 stop)</label>
+        </fieldset>
+        <div class="grid3">
+          <div class="field">
+            <label for="adults">Travellers</label>
+            <input id="adults" type="number" name="adults" min="1" max="9" value="1">
+          </div>
+          <div class="field">
+            <label for="cabin">Cabin</label>
+            <select id="cabin" name="cabin">
+              <option value="economy">Economy</option>
+              <option value="premium_economy">Premium Plus</option>
+              <option value="business">Polaris / Business</option>
+              <option value="first">First</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="max_stops">Max stops each way</label>
+            <select id="max_stops" name="max_stops">
+              <option value="0">Nonstop only</option>
+              <option value="1" selected>1 stop</option>
+              <option value="2">2 stops</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid3">
+          <div class="field">
+            <label for="preferred_airline">Preferred airline</label>
+            <input id="preferred_airline" name="preferred_airline" value="UA" maxlength="2">
+          </div>
+          <div class="field">
+            <label for="target_price_usd">Alert me under (USD total)</label>
+            <input id="target_price_usd" type="number" name="target_price_usd" min="1" placeholder="e.g. 1100">
+          </div>
+          <div class="field">
+            <label for="origin">Home airport</label>
+            <input id="origin" name="origin" value="DEN" maxlength="3">
+          </div>
+        </div>
+        <input type="hidden" name="match_date">
+        <input type="hidden" name="match_label">
+        <p id="form-error" class="error" role="alert" hidden></p>
+        <div class="actions">
+          <a href="#/" class="btn">Cancel</a>
+          <button type="submit" class="btn primary">Start tracking</button>
+        </div>
+      </form>
+    </section>
+  </template>
+</body>
+</html>
