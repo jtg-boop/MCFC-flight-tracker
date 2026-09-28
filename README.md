@@ -36,7 +36,9 @@ Copy `.env.example` to `.env` and fill in what you want:
 | **Duffel** (`FLIGHT_PROVIDER=duffel`) | Sign up at [duffel.com](https://duffel.com), create an access token, set `DUFFEL_ACCESS_TOKEN` | Full itineraries both directions. Test tokens return sandbox data; use a live token for real fares. |
 | **Google Flights via SerpApi** (`FLIGHT_PROVIDER=serpapi`) | Sign up at [serpapi.com](https://serpapi.com), set `SERPAPI_KEY` | Same prices you see on Google Flights. The free plan gives 100 searches/month. Return-flight times aren't included, so the train home is timed assuming an 11:00 departure. |
 
-**Budget your searches.** Each trip check runs *(outbound dates × return dates × routes)* searches. A 2-day × 2-day window with both routes is 8 searches per check. On SerpApi's free plan, keep windows tight or set `CHECK_INTERVAL_HOURS=24`.
+Setting either key is enough: the app uses SerpApi if `SERPAPI_KEY` is set, otherwise Duffel if `DUFFEL_ACCESS_TOKEN` is set. `FLIGHT_PROVIDER` overrides this.
+
+**Budget your searches.** Each trip check runs *(outbound dates × return dates × routes)* searches. Fixed dates with both routes is 2 searches per check; a 2-day × 2-day window is 8. With a SerpApi key the app checks once a day by default (`CHECK_INTERVAL_HOURS=24`), so one fixed-date trip uses about 60 of the 100 free searches a month. Every **Check prices now** click also uses searches.
 
 ### Trains
 

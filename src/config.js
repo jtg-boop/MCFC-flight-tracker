@@ -13,8 +13,12 @@ export const config = {
   port: num(process.env.PORT, 3000),
   dbPath: process.env.DB_PATH || resolve(process.cwd(), 'data', 'tracker.db'),
 
-  // Which price sources to use. "mock" works with no keys so you can try the app.
-  flightProvider: (process.env.FLIGHT_PROVIDER || 'mock').toLowerCase(),
+  // Which price sources to use. With no keys it falls back to "mock" demo data;
+  // with a SerpApi or Duffel key it uses that automatically.
+  flightProvider: (
+    process.env.FLIGHT_PROVIDER
+    || (process.env.SERPAPI_KEY ? 'serpapi' : process.env.DUFFEL_ACCESS_TOKEN ? 'duffel' : 'mock')
+  ).toLowerCase(),
   trainProvider: (process.env.TRAIN_PROVIDER || 'estimate').toLowerCase(),
   duffelToken: process.env.DUFFEL_ACCESS_TOKEN || '',
   serpApiKey: process.env.SERPAPI_KEY || '',
@@ -27,7 +31,8 @@ export const config = {
   ntfyServer: process.env.NTFY_SERVER || 'https://ntfy.sh',
 
   // How often every active trip is re-checked. 0 disables the scheduler.
-  checkIntervalHours: num(process.env.CHECK_INTERVAL_HOURS, 12),
+  // SerpApi's free plan is 100 searches/month, so check less often by default.
+  checkIntervalHours: num(process.env.CHECK_INTERVAL_HOURS, process.env.SERPAPI_KEY ? 24 : 12),
   // Each (outbound date x return date) pair costs one flight search per route.
   maxDateCombos: num(process.env.MAX_DATE_COMBOS, 12),
 
